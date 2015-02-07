@@ -5,4 +5,5 @@
   :depends-on (#:alexandria #:cl-fad ; #:lispbuilder-regex 
                             #:lispbuilder-lexer)
   :components ((:file "package")
-               (:file "plutus")))
+               (:file "plutus")
+               (:file "input")))
