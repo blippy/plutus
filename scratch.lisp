@@ -2,24 +2,32 @@
 ;;;; (load "scratch.lisp")
 (in-package #:plutus)
 
-(defvar *commands* (tokenise-inputs))
+;;(defparameter *commands* (tokenise-inputs))
 
-; TODO now process those commands !
+(read-inputs)
+;;;; TODO they are now in the ledger. The ledger needs to be processed
+  
+;;;; TODO  add to website
+(alexandria:eswitch (action :test #'equal-string)
+                    ("foo" (do-foo) )
+                    ("bar"  (do-bar )))
 
 
-(defclass inputs ()
-  (comms etrans))
-(defvar *inputs* (make-instance 'inputs))
-(inspect *inputs*)
 
-(loop for (cmd args) in (tokenise-inputs) do
-      (alexandria:eswitch (cmd :test #'string-equal)
-                          ("etran" (print "found etran"))
-                          ("comm"  (print "found comm"))))
+;;; https://github.com/marijnh/pcall/blob/master/queue.lisp
+(defparameter q (pcall-queue:make-queue))
+(progn
+  (setf q (pcall-queue:make-queue))
+  (pcall-queue:queue-push 14 q)
+  (pcall-queue:queue-push 15 q)
+  (pcall-queue:queue-push 'wanganum q)
+  (loop ;;until (pcall-queue:queue-empty-p q)
+   for empty = (pcall-queue:queue-empty-p q)
+   for el = (pcall-queue:queue-pop q)
+   until empty
+   ;;for foo = 1
+   do (print el))
+  t)
+(inspect q)
 
-(ql:system-apropos "utilities")
-(coerce "etran" 'symbol)
-(equalp (intern "etran") 'etran)
-(intern (string "foo"))
-(describe 'alexandria)
-#'switch
+(pcall-queue:queue-length q)

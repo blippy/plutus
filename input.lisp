@@ -41,3 +41,74 @@
   (loop for line in (get-inputs)
         for tokens = (tokenise-line line)
         when tokens collect tokens))
+
+(defparameter *schema*
+  '(("comm" store comm input-fields (sym dload type unit exc ticker name))
+    ("echo" echo)
+    ("etran" store etran input-fields (dstamp way acc sym qty amount))
+    ("FIN" ignore)
+    ("nacc" ignore)
+    ("ntran" ignore)
+    ("P" store price input-fields (dstamp tstamp sym unit))
+    ("period" ignore)
+    ("return" ignore)))
+
+
+
+(defclass ledger ()
+  (comm etran price))
+
+
+(defmethod initialize-instance ((instance ledger) &rest initargs)
+  (loop for slot in '(comm etran price)
+        do
+        (setf (slot-value instance slot) (pcall-queue:make-queue)))
+  t)
+
+(defparameter *ledger* (make-instance 'ledger))
+
+
+
+
+;;;; create the classes from the schema description
+(loop for (name action . rest)  in *schema*
+      do 
+      (when (equalp action 'STORE)
+        (let ((name (first rest))
+              (slots (third rest)))
+          ;;(format t "creating class ~a ~a ~%" name slots)
+          (eval `(defclass ,name () ,slots))
+          t)))
+
+;;;; begin schema action dispatcher
+
+(defun echo (schema-entry args)
+  (format *standard-output* "~a~%" (car args)))
+
+(defun ignore (schema-entry args) nil) ; just do nothing
+
+(defun store(schema-entry args)
+  (let* ((class (third schema-entry))
+         (input-fields (fifth schema-entry))
+         (ledger-slot (slot-value *ledger* class) )
+         (c (make-instance class)))
+    (loop for field-name in input-fields
+          for arg in args
+          do
+          (setf (slot-value c field-name) arg))
+    (pcall-queue:queue-push c ledger-slot)
+    t))
+
+
+;;;; end schema action dispatcher
+
+
+(defun read-inputs ()
+  "Read inputs, tokenise them, decode them, and add to them to the *ledger*"
+  (loop for (cmd . args) in (tokenise-inputs)
+        for schema-entry = (find cmd *schema* :test #'string-equal :key #'car)
+        for action = (second schema-entry)
+        do
+        (funcall action schema-entry args))
+  t)
+
