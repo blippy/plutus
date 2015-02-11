@@ -46,12 +46,12 @@
   '(("comm" store comm input-fields (sym dload type unit exc ticker name))
     ("echo" echo)
     ("etran" store etran input-fields (dstamp way acc sym qty amount))
-    ("FIN" ignore)
-    ("nacc" ignore)
-    ("ntran" ignore)
+    ("FIN" drop)
+    ("nacc" drop)
+    ("ntran" drop)
     ("P" store price input-fields (dstamp tstamp sym unit))
-    ("period" ignore)
-    ("return" ignore)))
+    ("period" drop)
+    ("return" drop)))
 
 
 
@@ -62,8 +62,11 @@
 (defmethod initialize-instance ((instance ledger) &rest initargs)
   (loop for slot in '(comm etran price)
         do
-        (setf (slot-value instance slot) (pcall-queue:make-queue)))
-  t)
+        ;;(setf (slot-value instance slot) (pcall-queue:make-queue)))
+        (setf (slot-value instance slot) nil)
+  t))
+
+
 
 (defparameter *ledger* (make-instance 'ledger))
 
@@ -85,7 +88,7 @@
 (defun echo (schema-entry args)
   (format *standard-output* "~a~%" (car args)))
 
-(defun ignore (schema-entry args) nil) ; just do nothing
+(defun drop (schema-entry args) nil) ; just do nothing
 
 (defun store(schema-entry args)
   (let* ((class (third schema-entry))
@@ -96,7 +99,10 @@
           for arg in args
           do
           (setf (slot-value c field-name) arg))
-    (pcall-queue:queue-push c ledger-slot)
+    ;;(pcall-queue:queue-push c ledger-slot)
+    (setf (slot-value *ledger* class) (append ledger-slot (list c)))
+    ;;(if ledger-slot (push c (cdr (last ledger-slot)))
+    ;;  (setf ledger-slot (list c)))
     t))
 
 
@@ -105,6 +111,7 @@
 
 (defun read-inputs ()
   "Read inputs, tokenise them, decode them, and add to them to the *ledger*"
+  (setf *ledger* (make-instance 'ledger))
   (loop for (cmd . args) in (tokenise-inputs)
         for schema-entry = (find cmd *schema* :test #'string-equal :key #'car)
         for action = (second schema-entry)
