@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+rlwrap sbcl --eval '(ql:quickload "plutus")' 
+
+#--eval '(use-package :plutus)' 
